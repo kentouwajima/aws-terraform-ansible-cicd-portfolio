@@ -81,3 +81,14 @@ module "loadbalancer" {
   security_group_id = module.security.alb_sg_id
   ec2_instance_id   = module.compute.instance_id
 }
+
+# ---------------------------------------------
+# Monitoring Module
+# ---------------------------------------------
+module "monitoring" {
+  source = "./modules/monitoring"
+
+  project_name    = var.project_name
+  ec2_instance_id = module.compute.instance_id # ComputeモジュールからIDをもらう
+  alert_email     = var.alert_email
+}

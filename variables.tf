@@ -35,3 +35,9 @@ variable "db_password" {
   type        = string
   sensitive   = true
 }
+
+variable "alert_email" {
+  description = "Email address for alarm notifications"
+  type        = string
+  # default = "..." ← defaultは書かず、tfvarsで管理するのがベストです
+}
