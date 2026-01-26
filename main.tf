@@ -88,7 +88,18 @@ module "loadbalancer" {
 module "monitoring" {
   source = "./modules/monitoring"
 
-  project_name    = var.project_name
-  ec2_instance_id = module.compute.instance_id # ComputeモジュールからIDをもらう
-  alert_email     = var.alert_email
+  project_name     = var.project_name
+  ec2_instance_id  = module.compute.instance_id # ComputeモジュールからIDをもらう
+  alert_email      = var.alert_email
+  waf_web_acl_name = module.waf.web_acl_name
+}
+
+# ---------------------------------------------
+# WAF Module 
+# ---------------------------------------------
+module "waf" {
+  source = "./modules/waf"
+
+  project_name = var.project_name
+  alb_arn      = module.loadbalancer.alb_arn
 }

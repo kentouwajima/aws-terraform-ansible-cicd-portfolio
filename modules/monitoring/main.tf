@@ -39,3 +39,31 @@ resource "aws_cloudwatch_metric_alarm" "ec2_cpu_high" {
   alarm_actions = [aws_sns_topic.cpu_alarm.arn]
   ok_actions    = [aws_sns_topic.cpu_alarm.arn] # 正常に戻った時も通知（任意）
 }
+
+# ----------------------------
+# CloudWatch Alarm (WAF Blocked)
+# ----------------------------
+resource "aws_cloudwatch_metric_alarm" "waf_blocked" {
+  alarm_name        = "${var.project_name}-waf-blocked"
+  alarm_description = "Alarm when WAF blocks any request"
+  namespace         = "AWS/WAFV2"
+  metric_name       = "BlockedRequests"
+
+  # 監視対象の特定
+  dimensions = {
+    WebACL = var.waf_web_acl_name
+    Region = "ap-northeast-1"
+    Rule   = "ALL" # 全てのルールの合計を監視
+  }
+
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  period              = 60 # 1分間隔でチェック
+  statistic           = "Sum"
+  threshold           = 0 # 1件でもブロックされたら通知
+
+  treat_missing_data = "notBreaching"
+
+  # アクション (既存のSNSトピックを使用)
+  alarm_actions = [aws_sns_topic.cpu_alarm.arn]
+}
