@@ -68,3 +68,16 @@ module "database" {
   rds_sg_id          = module.security.rds_sg_id
   db_password        = var.db_password
 }
+
+# ---------------------------------------------
+# LoadBalancer Module
+# ---------------------------------------------
+module "loadbalancer" {
+  source = "./modules/loadbalancer"
+
+  project_name      = var.project_name
+  vpc_id            = module.network.vpc_id
+  public_subnet_ids = module.network.public_subnet_ids
+  security_group_id = module.security.alb_sg_id
+  ec2_instance_id   = module.compute.instance_id
+}

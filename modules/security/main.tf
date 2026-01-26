@@ -1,4 +1,33 @@
 # ----------------------------
+# Security Group for ALB 
+# ----------------------------
+resource "aws_security_group" "alb" {
+  name        = "${var.project_name}-alb-sg"
+  description = "Security group for ALB"
+  vpc_id      = var.vpc_id
+
+  # Inbound: 世界中からHTTP(80)アクセスを許可
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Outbound: EC2(8080)へ通信するために全許可
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${var.project_name}-alb-sg"
+  }
+}
+
+# ----------------------------
 # Security Group for EC2
 # ----------------------------
 resource "aws_security_group" "ec2" {
@@ -15,14 +44,13 @@ resource "aws_security_group" "ec2" {
     description = "Allow SSH from My IP"
   }
 
-  # Inbound: HTTP (動作確認用: 全開放)
-  # ※将来ALB導入時にソースをALBのみに変更予定
+  # Inbound: Spring Boot (8080) from ALB 
   ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "Allow HTTP from Anywhere"
+    from_port       = 8080
+    to_port         = 8080
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id] # ALB SG IDを指定
+    description     = "Allow Spring Boot from ALB"
   }
 
   # Outbound: 全許可

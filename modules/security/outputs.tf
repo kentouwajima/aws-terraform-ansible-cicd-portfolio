@@ -6,3 +6,7 @@ output "rds_sg_id" {
   description = "RDS用セキュリティグループID"
   value       = aws_security_group.rds.id
 }
+
+output "alb_sg_id" {
+  value = aws_security_group.alb.id
+}
