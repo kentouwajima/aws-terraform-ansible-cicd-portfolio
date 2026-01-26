@@ -36,7 +36,7 @@ resource "aws_instance" "app_server" {
   ami           = data.aws_ssm_parameter.al2023_ami.value
   instance_type = var.instance_type
   subnet_id     = var.public_subnet_id
-  
+
   key_name               = aws_key_pair.key_pair.key_name
   vpc_security_group_ids = [var.security_group_id]
 
