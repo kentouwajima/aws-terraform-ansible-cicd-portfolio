@@ -55,3 +55,16 @@ module "compute" {
   public_subnet_id  = module.network.public_subnet_ids[0] # 1つ目のPublicサブネットを使用
   security_group_id = module.security.ec2_sg_id
 }
+
+# ---------------------------------------------
+# Database Module
+# ---------------------------------------------
+module "database" {
+  source = "./modules/database"
+
+  project_name       = var.project_name
+  vpc_id             = module.network.vpc_id
+  private_subnet_ids = module.network.private_subnet_ids
+  rds_sg_id          = module.security.rds_sg_id
+  db_password        = var.db_password
+}
