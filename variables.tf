@@ -29,3 +29,9 @@ variable "allowed_ssh_cidr" {
   description = "Allowed CIDR for SSH access"
   type        = string
 }
+
+variable "db_password" {
+  description = "Password for the database"
+  type        = string
+  sensitive   = true
+}
