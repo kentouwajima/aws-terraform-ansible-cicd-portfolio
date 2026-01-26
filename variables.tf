@@ -24,3 +24,8 @@ variable "availability_zones" {
   type    = list(string)
   default = ["ap-northeast-1a", "ap-northeast-1c"]
 }
+
+variable "allowed_ssh_cidr" {
+  description = "Allowed CIDR for SSH access"
+  type        = string
+}
