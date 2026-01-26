@@ -11,3 +11,8 @@ variable "alert_email" {
   description = "アラート通知先のメールアドレス"
   type        = string
 }
+
+variable "waf_web_acl_name" {
+  description = "監視対象のWAF WebACL名"
+  type        = string
+}
