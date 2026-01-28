@@ -26,6 +26,7 @@ jobs:
       # Terraform変数 (variables.tf で定義したもの)
       TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}
       TF_VAR_alert_email: ${{ secrets.TF_VAR_ALERT_EMAIL }}
+      TF_VAR_allowed_ssh_cidr: ${{ secrets.TF_VAR_ALLOWED_SSH_CIDR }}
 
     steps:
       - name: Checkout Code
