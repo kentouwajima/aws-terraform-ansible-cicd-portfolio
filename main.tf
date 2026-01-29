@@ -54,6 +54,7 @@ module "compute" {
   project_name      = var.project_name
   public_subnet_id  = module.network.public_subnet_ids[0] # 1つ目のPublicサブネットを使用
   security_group_id = module.security.ec2_sg_id
+  key_name          = var.key_name
 }
 
 # ---------------------------------------------
