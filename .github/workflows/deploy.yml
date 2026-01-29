@@ -1,4 +1,4 @@
-name: Terraform CI/CD
+name: Terraform CI/CD & Ansible
 
 on:
   push:
@@ -13,17 +13,14 @@ permissions:
   contents: read
 
 jobs:
-  terraform:
-    name: Terraform Workflow
+  deploy:
+    name: Deploy Infrastructure & App
     runs-on: ubuntu-latest
 
     env:
-      # AWS認証情報
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: "ap-northeast-1"
-      
-      # Terraform変数 (variables.tf で定義したもの)
       TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}
       TF_VAR_alert_email: ${{ secrets.TF_VAR_ALERT_EMAIL }}
       TF_VAR_allowed_ssh_cidr: ${{ secrets.TF_VAR_ALLOWED_SSH_CIDR }}
@@ -35,7 +32,6 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          # 最新の安定版を指定 (1.14.3は存在しないため、現行の最新系 1.9.x または 1.10.x を推奨)
           terraform_version: 1.10.0
 
       - name: Terraform Init
@@ -47,22 +43,64 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
-      # テストコード(testsディレクトリ)がない場合はスキップ推奨ですが、ある場合は有効化してください
-      # - name: Run Terraform Test
-      #   run: terraform test
-
-      # ---------------------------------------------------
-      # Plan (変更内容の確認)
-      # ---------------------------------------------------
+      # --- Terraform Apply ---
       - name: Terraform Plan
         id: plan
-        # PRの時、またはMainへのPush時に実行
         run: terraform plan -no-color -input=false
 
-      # ---------------------------------------------------
-      # Apply (変更の適用)
-      # ---------------------------------------------------
       - name: Terraform Apply
-        # 'main' ブランチへの 'push' イベントの時のみ実行 (PRでは実行しない)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: terraform apply -auto-approve -input=false
+
+      # --- Ansible Execution ---
+      
+      # 1. IPとSG情報の取得、鍵の生成
+      - name: Configure Dynamic IP & Secrets
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        id: config_dynamic_env
+        run: |
+          MY_IP=$(curl -s http://checkip.amazonaws.com)
+          echo "DETECTED_IP=$MY_IP" >> $GITHUB_ENV
+          
+          # outputs.tf で定義した名前と一致させる必要があります
+          echo "EC2_IP=$(terraform output -raw ec2_public_ip)" >> $GITHUB_ENV
+          echo "SG_ID=$(terraform output -raw ec2_ssh_sg_id)" >> $GITHUB_ENV
+          
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > private_key.pem
+          chmod 600 private_key.pem
+
+      # 2. セキュリティグループの一時開放
+      - name: Authorize Security Group Ingress
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          echo "Adding IP ${{ env.DETECTED_IP }} to Security Group ${{ env.SG_ID }}"
+          aws ec2 authorize-security-group-ingress \
+            --group-id ${{ env.SG_ID }} \
+            --protocol tcp \
+            --port 22 \
+            --cidr ${{ env.DETECTED_IP }}/32
+
+      # 3. Ansibleのインストール
+      - name: Install Ansible
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: pip install ansible
+
+      # 4. Playbook実行
+      - name: Run Ansible Playbook
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+        run: |
+          sleep 5
+          ansible-playbook -i "${{ env.EC2_IP }}," -u ec2-user --private-key private_key.pem ansible/playbook.yml
+
+      # 5. セキュリティグループを閉じる (必ず実行)
+      - name: Revoke Security Group Ingress
+        if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          echo "Removing IP ${{ env.DETECTED_IP }} from Security Group ${{ env.SG_ID }}"
+          aws ec2 revoke-security-group-ingress \
+            --group-id ${{ env.SG_ID }} \
+            --protocol tcp \
+            --port 22 \
+            --cidr ${{ env.DETECTED_IP }}/32

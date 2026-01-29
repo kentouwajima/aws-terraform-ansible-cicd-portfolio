@@ -3,6 +3,11 @@ output "ec2_public_ip" {
   value       = module.compute.public_ip
 }
 
+output "ec2_ssh_sg_id" {
+  description = "Security Group ID for SSH access"
+  value       = module.security.ec2_sg_id
+}
+
 output "rds_endpoint" {
   value = module.database.db_endpoint
 }

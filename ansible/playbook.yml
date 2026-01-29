@@ -1,0 +1,81 @@
+- name: Setup Web Server and App
+  hosts: all
+  user: ec2-user
+  become: true
+
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    app_repo_url: "https://github.com/koujienami/aws-study.git"
+    app_dir: "/home/ec2-user/aws-study"
+
+  tasks:
+    - name: Wait for SSH connection
+      ansible.builtin.wait_for_connection:
+        delay: 10
+        timeout: 300
+
+    - name: Install Java 21
+      ansible.builtin.dnf:
+        name: java-21-amazon-corretto-devel
+        state: present
+
+    - name: Install Git
+      ansible.builtin.dnf:
+        name: git
+        state: present
+
+    - name: Install MariaDB Client
+      ansible.builtin.dnf:
+        name: mariadb105
+        state: present
+
+    - name: Remove existing app directory
+      ansible.builtin.file:
+        path: "{{ app_dir }}"
+        state: absent
+
+    - name: Clone SpringBoot Repository
+      ansible.builtin.git:
+        repo: "{{ app_repo_url }}"
+        dest: "{{ app_dir }}"
+        version: main
+        force: yes
+      become_user: ec2-user
+
+    - name: Grant execute permission to gradlew
+      ansible.builtin.file:
+        path: "{{ app_dir }}/gradlew"
+        mode: '0755'
+      become_user: ec2-user
+
+    - name: Create Systemd Unit file
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/webapp.service
+        content: |
+          [Unit]
+          Description=Spring Boot Application
+          After=network.target
+
+          [Service]
+          User=ec2-user
+          Group=ec2-user
+          WorkingDirectory={{ app_dir }}
+          ExecStart={{ app_dir }}/gradlew bootRun
+          Restart=always
+          RestartSec=10
+          StandardOutput=syslog
+          StandardError=syslog
+          SyslogIdentifier=webapp
+
+          [Install]
+          WantedBy=multi-user.target
+        mode: '0644'
+      notify: Restart WebApp
+
+  handlers:
+    - name: Restart WebApp
+      ansible.builtin.systemd:
+        name: webapp
+        state: restarted
+        enabled: yes
+        daemon_reload: yes
