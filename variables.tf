@@ -41,3 +41,9 @@ variable "alert_email" {
   type        = string
   # default = "..." ← defaultは書かず、tfvarsで管理するのがベストです
 }
+
+variable "key_name" {
+  description = "EC2で使用するキーペアの名前"
+  type        = string
+  default     = "kentouwajima" # AWSコンソール上のキーペア名と一致させる
+}
