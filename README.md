@@ -39,11 +39,7 @@
 
 インフラ構成図は、以下のようなイメージを想定しています。
 
-- `images/architecture.png` を作成し、ここに埋め込む想定です。
-
-```markdown
-![Architecture](images/architecture.png)
-```
+![Architecture](images/architecture.svg)
 
 ---
 
