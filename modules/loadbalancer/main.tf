@@ -60,9 +60,6 @@ resource "aws_lb_listener" "http" {
 # Listener (HTTPS: 443) -> Target Groupへ転送
 # ----------------------------
 resource "aws_lb_listener" "https" {
-  # 証明書がまだ作成されていない最初の構築時でもエラーにならないよう
-  # certificate_arnがnullの場合はこのリソースの作成を待機、または条件分岐させる
-  count = var.certificate_arn != null ? 1 : 0
 
   load_balancer_arn = aws_lb.this.arn
   port              = "443"

@@ -69,21 +69,7 @@ module "database" {
 }
 
 # ---------------------------------------------
-# 5. DNS Module (依存切り離し版)
-# ---------------------------------------------
-module "dns" {
-  source = "./modules/dns"
-
-  project_name = var.project_name
-  domain_name  = "developers-lab.work"
-
-  # 固定値をやめて、ALBからの動的参照に戻す（これで自動連携されます）
-  alb_dns_name = module.loadbalancer.alb_dns_name
-  alb_zone_id  = module.loadbalancer.alb_zone_id
-}
-
-# ---------------------------------------------
-# 6. LoadBalancer Module
+# 5. LoadBalancer Module
 # ---------------------------------------------
 module "loadbalancer" {
   source = "./modules/loadbalancer"
@@ -93,17 +79,33 @@ module "loadbalancer" {
   public_subnet_ids = module.network.public_subnet_ids
   security_group_id = module.security.alb_sg_id
   ec2_instance_id   = module.compute.instance_id
-  certificate_arn   = module.dns.certificate_arn
+
+  # DNSモジュールで作成される証明書を直接参照します
+  certificate_arn = module.dns.certificate_arn
 }
 
 # ---------------------------------------------
-# 7. WAF Module 
+# 6. WAF Module 
 # ---------------------------------------------
 module "waf" {
   source = "./modules/waf"
 
   project_name = var.project_name
   alb_arn      = module.loadbalancer.alb_arn
+}
+
+# ---------------------------------------------
+# 7. DNS Module
+# ---------------------------------------------
+module "dns" {
+  source = "./modules/dns"
+
+  project_name = var.project_name
+  domain_name  = "developers-lab.work"
+
+  # ALBの情報を動的に受け取ります
+  alb_dns_name = module.loadbalancer.alb_dns_name
+  alb_zone_id  = module.loadbalancer.alb_zone_id
 }
 
 # ---------------------------------------------
