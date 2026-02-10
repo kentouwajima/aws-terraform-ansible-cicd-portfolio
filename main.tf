@@ -81,6 +81,7 @@ module "loadbalancer" {
   public_subnet_ids = module.network.public_subnet_ids
   security_group_id = module.security.alb_sg_id
   ec2_instance_id   = module.compute.instance_id
+  certificate_arn   = module.dns.certificate_arn
 }
 
 # ---------------------------------------------
@@ -103,4 +104,13 @@ module "waf" {
 
   project_name = var.project_name
   alb_arn      = module.loadbalancer.alb_arn
+}
+
+module "dns" {
+  source = "./modules/dns"
+
+  project_name = var.project_name
+  domain_name  = "developers-lab.work"
+  alb_dns_name = module.loadbalancer.alb_dns_name
+  alb_zone_id  = module.loadbalancer.alb_zone_id
 }

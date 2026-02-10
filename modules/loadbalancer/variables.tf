@@ -19,3 +19,8 @@ variable "ec2_instance_id" {
   description = "EC2 Instance ID for Target Group"
   type        = string
 }
+
+variable "certificate_arn" {
+  type    = string
+  default = null # 最初は空でも動くようにしておくと安全です
+}

@@ -23,7 +23,7 @@ resource "aws_lb_target_group" "this" {
   vpc_id   = var.vpc_id
 
   health_check {
-    path                = "/" # アプリのルートパス
+    path                = "/"
     port                = "traffic-port"
     protocol            = "HTTP"
     matcher             = "200"
@@ -39,12 +39,36 @@ resource "aws_lb_target_group" "this" {
 }
 
 # ----------------------------
-# Listener
+# Listener (HTTP: 80) -> HTTPSへリダイレクト
 # ----------------------------
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.this.arn
-  port              = "80" # ユーザーアクセスのポート
+  port              = "80"
   protocol          = "HTTP"
+
+  default_action {
+    type = "redirect"
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+}
+
+# ----------------------------
+# Listener (HTTPS: 443) -> Target Groupへ転送
+# ----------------------------
+resource "aws_lb_listener" "https" {
+  # 証明書がまだ作成されていない最初の構築時でもエラーにならないよう
+  # certificate_arnがnullの場合はこのリソースの作成を待機、または条件分岐させる
+  count = var.certificate_arn != null ? 1 : 0
+
+  load_balancer_arn = aws_lb.this.arn
+  port              = "443"
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-2016-08"
+  certificate_arn   = var.certificate_arn
 
   default_action {
     type             = "forward"
@@ -58,5 +82,5 @@ resource "aws_lb_listener" "http" {
 resource "aws_lb_target_group_attachment" "ec2" {
   target_group_arn = aws_lb_target_group.this.arn
   target_id        = var.ec2_instance_id
-  port             = 8080 # EC2側のポート
+  port             = 8080
 }
