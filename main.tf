@@ -81,7 +81,7 @@ module "loadbalancer" {
   public_subnet_ids = module.network.public_subnet_ids
   security_group_id = module.security.alb_sg_id
   ec2_instance_id   = module.compute.instance_id
-  #certificate_arn   = module.dns.certificate_arn
+  certificate_arn   = module.dns.certificate_arn
 }
 
 # ---------------------------------------------
