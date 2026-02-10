@@ -3,7 +3,6 @@ terraform {
 
   backend "s3" {
     bucket = "tf-state-aws-study-kentouwajima"
-    # 重要: 既存の学習用Stateと混ざらないようパスを変更
     key    = "portfolio/terraform.tfstate"
     region = "ap-northeast-1"
   }
@@ -21,12 +20,11 @@ provider "aws" {
 }
 
 # ---------------------------------------------
-# Network Module の呼び出し
+# 1. Network Module
 # ---------------------------------------------
 module "network" {
   source = "./modules/network"
 
-  # 左側が「モジュールのvariables.tf」、右側が「ルートのvariables.tf」
   project_name         = var.project_name
   vpc_cidr             = var.vpc_cidr
   public_subnet_cidrs  = var.public_subnet_cidrs
@@ -35,7 +33,7 @@ module "network" {
 }
 
 # ---------------------------------------------
-# Security Module
+# 2. Security Module
 # ---------------------------------------------
 module "security" {
   source = "./modules/security"
@@ -46,19 +44,19 @@ module "security" {
 }
 
 # ---------------------------------------------
-# Compute Module
+# 3. Compute Module
 # ---------------------------------------------
 module "compute" {
   source = "./modules/compute"
 
   project_name      = var.project_name
-  public_subnet_id  = module.network.public_subnet_ids[0] # 1つ目のPublicサブネットを使用
+  public_subnet_id  = module.network.public_subnet_ids[0]
   security_group_id = module.security.ec2_sg_id
   key_name          = var.key_name
 }
 
 # ---------------------------------------------
-# Database Module
+# 4. Database Module
 # ---------------------------------------------
 module "database" {
   source = "./modules/database"
@@ -71,7 +69,22 @@ module "database" {
 }
 
 # ---------------------------------------------
-# LoadBalancer Module
+# 5. DNS Module (最優先で作成)
+# ---------------------------------------------
+module "dns" {
+  source = "./modules/dns"
+
+  project_name = var.project_name
+  domain_name  = "developers-lab.work"
+
+  # 【重要】循環参照回避のため、初回はALBから直接参照せず固定値を指定するか
+  # ALBモジュールができあがるのを待たずに定義できる値を渡します
+  alb_dns_name = module.loadbalancer.alb_dns_name
+  alb_zone_id  = module.loadbalancer.alb_zone_id
+}
+
+# ---------------------------------------------
+# 6. LoadBalancer Module
 # ---------------------------------------------
 module "loadbalancer" {
   source = "./modules/loadbalancer"
@@ -81,23 +94,14 @@ module "loadbalancer" {
   public_subnet_ids = module.network.public_subnet_ids
   security_group_id = module.security.alb_sg_id
   ec2_instance_id   = module.compute.instance_id
-  certificate_arn   = module.dns.certificate_arn
+  
+  # 【重要】初回Apply時はここをコメントアウトしてPushしてください
+  # 一度Applyが成功し、ACM証明書が「発行済み」になればコメントを外せます
+  # certificate_arn = module.dns.certificate_arn
 }
 
 # ---------------------------------------------
-# Monitoring Module
-# ---------------------------------------------
-module "monitoring" {
-  source = "./modules/monitoring"
-
-  project_name     = var.project_name
-  ec2_instance_id  = module.compute.instance_id # ComputeモジュールからIDをもらう
-  alert_email      = var.alert_email
-  waf_web_acl_name = module.waf.web_acl_name
-}
-
-# ---------------------------------------------
-# WAF Module 
+# 7. WAF Module 
 # ---------------------------------------------
 module "waf" {
   source = "./modules/waf"
@@ -106,11 +110,14 @@ module "waf" {
   alb_arn      = module.loadbalancer.alb_arn
 }
 
-module "dns" {
-  source = "./modules/dns"
+# ---------------------------------------------
+# 8. Monitoring Module
+# ---------------------------------------------
+module "monitoring" {
+  source = "./modules/monitoring"
 
-  project_name = var.project_name
-  domain_name  = "developers-lab.work"
-  alb_dns_name = module.loadbalancer.alb_dns_name
-  alb_zone_id  = module.loadbalancer.alb_zone_id
+  project_name     = var.project_name
+  ec2_instance_id  = module.compute.instance_id
+  alert_email      = var.alert_email
+  waf_web_acl_name = module.waf.web_acl_name
 }
