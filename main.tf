@@ -94,7 +94,7 @@ module "loadbalancer" {
   public_subnet_ids = module.network.public_subnet_ids
   security_group_id = module.security.alb_sg_id
   ec2_instance_id   = module.compute.instance_id
-  
+
   # 【重要】初回Apply時はここをコメントアウトしてPushしてください
   # 一度Applyが成功し、ACM証明書が「発行済み」になればコメントを外せます
   # certificate_arn = module.dns.certificate_arn
