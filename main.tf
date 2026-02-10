@@ -69,7 +69,21 @@ module "database" {
 }
 
 # ---------------------------------------------
-# 5. LoadBalancer Module
+# 5. DNS Module (依存切り離し版)
+# ---------------------------------------------
+module "dns" {
+  source = "./modules/dns"
+
+  project_name = var.project_name
+  domain_name  = "developers-lab.work"
+
+  # 重要：ALBモジュールを参照せず、直接値を指定して依存関係を断ち切ります
+  alb_dns_name = "portfolio-alb-1295398667.ap-northeast-1.elb.amazonaws.com"
+  alb_zone_id  = "Z14GRHDCWA56QT"
+}
+
+# ---------------------------------------------
+# 6. LoadBalancer Module
 # ---------------------------------------------
 module "loadbalancer" {
   source = "./modules/loadbalancer"
@@ -80,30 +94,18 @@ module "loadbalancer" {
   security_group_id = module.security.alb_sg_id
   ec2_instance_id   = module.compute.instance_id
 
-  # コメントアウトを解除し、DNSモジュールから証明書ARNを受け取る
-  certificate_arn = module.dns.certificate_arn
+  # 重要：ACM証明書が「作成完了」するまで、ここはコメントアウトのままにします
+  # certificate_arn = module.dns.certificate_arn
 }
 
 # ---------------------------------------------
-# 6. WAF Module 
+# 7. WAF Module 
 # ---------------------------------------------
 module "waf" {
   source = "./modules/waf"
 
   project_name = var.project_name
   alb_arn      = module.loadbalancer.alb_arn
-}
-
-# ---------------------------------------------
-# 7. DNS Module
-# ---------------------------------------------
-module "dns" {
-  source = "./modules/dns"
-
-  project_name = var.project_name
-  domain_name  = "developers-lab.work"
-  alb_dns_name = module.loadbalancer.alb_dns_name
-  alb_zone_id  = module.loadbalancer.alb_zone_id
 }
 
 # ---------------------------------------------
