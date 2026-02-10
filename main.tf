@@ -69,22 +69,7 @@ module "database" {
 }
 
 # ---------------------------------------------
-# 5. DNS Module (最優先で作成)
-# ---------------------------------------------
-module "dns" {
-  source = "./modules/dns"
-
-  project_name = var.project_name
-  domain_name  = "developers-lab.work"
-
-  # 【重要】循環参照回避のため、初回はALBから直接参照せず固定値を指定するか
-  # ALBモジュールができあがるのを待たずに定義できる値を渡します
-  alb_dns_name = module.loadbalancer.alb_dns_name
-  alb_zone_id  = module.loadbalancer.alb_zone_id
-}
-
-# ---------------------------------------------
-# 6. LoadBalancer Module
+# 5. LoadBalancer Module
 # ---------------------------------------------
 module "loadbalancer" {
   source = "./modules/loadbalancer"
@@ -95,19 +80,30 @@ module "loadbalancer" {
   security_group_id = module.security.alb_sg_id
   ec2_instance_id   = module.compute.instance_id
 
-  # 【重要】初回Apply時はここをコメントアウトしてPushしてください
-  # 一度Applyが成功し、ACM証明書が「発行済み」になればコメントを外せます
-  # certificate_arn = module.dns.certificate_arn
+  # コメントアウトを解除し、DNSモジュールから証明書ARNを受け取る
+  certificate_arn = module.dns.certificate_arn
 }
 
 # ---------------------------------------------
-# 7. WAF Module 
+# 6. WAF Module 
 # ---------------------------------------------
 module "waf" {
   source = "./modules/waf"
 
   project_name = var.project_name
   alb_arn      = module.loadbalancer.alb_arn
+}
+
+# ---------------------------------------------
+# 7. DNS Module
+# ---------------------------------------------
+module "dns" {
+  source = "./modules/dns"
+
+  project_name = var.project_name
+  domain_name  = "developers-lab.work"
+  alb_dns_name = module.loadbalancer.alb_dns_name
+  alb_zone_id  = module.loadbalancer.alb_zone_id
 }
 
 # ---------------------------------------------
