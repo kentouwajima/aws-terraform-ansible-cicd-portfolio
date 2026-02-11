@@ -47,8 +47,8 @@ resource "aws_security_group" "ec2" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = [var.allowed_ssh_cidr]
-    description = "Allow SSH from My IP"
+    cidr_blocks = ["0.0.0.0/0"] # var.allowed_ssh_cidr から一時的に変更
+    description = "Allow SSH for Ansible CD"
   }
 
   # Inbound: Spring Boot (8080) from ALB 
